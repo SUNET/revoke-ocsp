@@ -126,9 +126,9 @@ func goHandler(w http.ResponseWriter, r *http.Request) {
 	for scanner.Scan() {
 		var status string
 		var serial int64
-		parts := strings.Split(scanner.Text(), "\t")
-		status = parts[0]
-		serial, err = strconv.ParseInt(parts[3], 10, 64)
+		row := strings.Split(scanner.Text(), "\t")
+		status = row[0]
+		serial, err = strconv.ParseInt(row[3], 10, 64)
 		check(err, &w)
 		_, err = register(index, serial, status)
 		check(err, &w)
@@ -137,10 +137,10 @@ func goHandler(w http.ResponseWriter, r *http.Request) {
 	// Read CA certificate, key
 	// TODO: Optimization: Only when needed.
 	pemBlock := readPEM("data/get.eduroam.se.pem", &w)
-	cert, err := x509.ParseCertificate(pemBlock.Bytes)
+	caCert, err := x509.ParseCertificate(pemBlock.Bytes)
 	check(err, &w)
-	pemBlock = readPEM("data/get.eduroam.se.key.pem", &w)
-	key, err := x509.ParseECPrivateKey(pemBlock.Bytes)
+	pemBlock = readPEM("data/get.eduroam.se.caKey.pem", &w)
+	caKey, err := x509.ParseECPrivateKey(pemBlock.Bytes)
 	check(err, &w)
 
 	// Parse request
@@ -150,8 +150,8 @@ func goHandler(w http.ResponseWriter, r *http.Request) {
 
 	// Create response
 	now := time.Now()
-	template := ocsp.Response{
-		Certificate:  cert,
+	tmpl := ocsp.Response{
+		Certificate:  caCert,
 		SerialNumber: req.SerialNumber,
 		IssuerHash:   crypto.SHA1,
 		ThisUpdate:   now,
@@ -164,17 +164,17 @@ func goHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if s, found := index[serial]; !found {
-		template.Status = ocsp.Unknown
+		tmpl.Status = ocsp.Unknown
 	} else if s {
-		template.Status = ocsp.Good
+		tmpl.Status = ocsp.Good
 	} else {
-		template.Status = ocsp.Revoked
-		template.RevokedAt = now
-		template.RevocationReason = ocsp.Unspecified // TODO
+		tmpl.Status = ocsp.Revoked
+		tmpl.RevokedAt = now
+		tmpl.RevocationReason = ocsp.Unspecified // TODO
 	}
 
 	// Sign response using CA certificate
-	resp, err := ocsp.CreateResponse(cert, cert, template, key)
+	resp, err := ocsp.CreateResponse(caCert, caCert, tmpl, caKey)
 	check(err, &w)
 
 	// Write HTTP response
