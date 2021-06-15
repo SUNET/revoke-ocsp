@@ -1,0 +1,7 @@
+#!/usr/bin/env bash
+openssl ocsp \
+    -CAfile data/get.eduroam.se.pem \
+    -issuer data/get.eduroam.se.pem \
+    -cert data/zrbb0993ry4m3z0n\@get.eduroam.se.pem \
+    -url http://localhost:8889/openssl \
+    -text
