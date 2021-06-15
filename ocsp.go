@@ -101,11 +101,12 @@ func readPEM(filename string, w *http.ResponseWriter) *pem.Block {
 }
 
 // Handle an OCSP request using standard library and golang.org/x/crypto/ocsp.
-// Nonce extension [1] is NOT used, and the responder's cert is NOT included in
-// the response. [2]
+// Nonce extension [1] is NOT used. The responder's cert is included in the
+// response. [2][3]
 //
 // [1]: https://datatracker.ietf.org/doc/html/rfc6960#section-4.4.1
 // [2]: https://datatracker.ietf.org/doc/html/rfc6960#section-4.2.1
+// [3]: https://github.com/golang/go/issues/22335
 func goHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method != "POST" {
 		http.Error(w, "Only POST requests are supported", http.StatusMethodNotAllowed)
@@ -150,6 +151,7 @@ func goHandler(w http.ResponseWriter, r *http.Request) {
 	// Create response
 	now := time.Now()
 	template := ocsp.Response{
+		Certificate:  cert,
 		SerialNumber: req.SerialNumber,
 		IssuerHash:   crypto.SHA1,
 		ThisUpdate:   now,
