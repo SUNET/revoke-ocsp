@@ -1,9 +1,9 @@
 package main
 
 import (
-	"bufio"
 	"crypto"
 	"crypto/x509"
+	"database/sql"
 	"encoding/pem"
 	"errors"
 	"fmt"
@@ -12,10 +12,11 @@ import (
 	"net/http"
 	"os"
 	"strconv"
-	"strings"
 	"time"
 
 	"golang.org/x/crypto/ocsp"
+
+	_ "github.com/mattn/go-sqlite3"
 )
 
 type requestError struct {
@@ -35,7 +36,7 @@ func (fn errHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
 		}
-		fmt.Println(err) // TODO: Remove
+		log.Print(err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
 }
@@ -52,16 +53,34 @@ func readPEM(filename string) (*pem.Block, error) {
 	return block, nil
 }
 
-func register(m map[int64]bool, serial int64, status string) (map[int64]bool, error) {
-	switch status {
-	case "V":
-		m[serial] = true
-	case "R":
-		m[serial] = false
-	default:
-		return m, fmt.Errorf("Unrecognized status field in index file: %s", status)
+type cert struct {
+	serial    int64
+	revoked   bool
+	revokedAt sql.NullTime
+}
+
+func readIndex(db *sql.DB) (map[int64]*cert, error) {
+	rows, err := db.Query("SELECT serial, revoked, revoked_at FROM revoked ORDER BY serial")
+	if err != nil {
+		return nil, err
 	}
-	return m, nil
+	defer rows.Close()
+
+	res := make(map[int64]*cert)
+	for rows.Next() {
+		c := cert{}
+		err = rows.Scan(&c.serial, &c.revoked, &c.revokedAt)
+		if err != nil {
+			return nil, err
+		}
+		res[c.serial] = &c
+	}
+
+	if err = rows.Err(); err != nil {
+		return nil, err
+	}
+
+	return res, nil
 }
 
 // Handle an OCSP request using standard library and golang.org/x/crypto/ocsp.
@@ -71,37 +90,15 @@ func register(m map[int64]bool, serial int64, status string) (map[int64]bool, er
 // [1]: https://datatracker.ietf.org/doc/html/rfc6960#section-4.4.1
 // [2]: https://datatracker.ietf.org/doc/html/rfc6960#section-4.2.1
 // [3]: https://github.com/golang/go/issues/22335
-func makeOCSPHandler() errHandler {
+func makeOCSPHandler(db *sql.DB) errHandler {
 	return func(w http.ResponseWriter, r *http.Request) error {
 		if r.Method != "POST" {
 			return errors.New("Only POST requests are supported")
 		}
 
-		// Read index.txt
-		//
-		// TODO: Index file is for a single CA. If we decide to use go crypto we
-		// will probably replace the OpenSSL index format entirely.
-		// TODO: Optimization: Only when needed.
-		index := make(map[int64]bool) // TODO: Do we need big.Int?
-		file, err := os.Open("data/index.txt")
+		index, err := readIndex(db)
 		if err != nil {
 			return err
-		}
-		defer file.Close()
-		scanner := bufio.NewScanner(file)
-		for scanner.Scan() {
-			var status string
-			var serial int64
-			row := strings.Split(scanner.Text(), "\t")
-			status = row[0]
-			serial, err = strconv.ParseInt(row[3], 10, 64)
-			if err != nil {
-				return err
-			}
-			_, err = register(index, serial, status)
-			if err != nil {
-				return err
-			}
 		}
 
 		// Read CA certificate, key
@@ -145,14 +142,17 @@ func makeOCSPHandler() errHandler {
 			return errors.New("Requested serial number is larger than 64 bits")
 		}
 
-		if s, found := index[serial]; !found {
+		if c, found := index[serial]; !found {
 			tmpl.Status = ocsp.Unknown
-		} else if s {
-			tmpl.Status = ocsp.Good
-		} else {
+		} else if c.revoked {
 			tmpl.Status = ocsp.Revoked
-			tmpl.RevokedAt = now
+			if !c.revokedAt.Valid {
+				return errors.New("Database error: No revocation date")
+			}
+			tmpl.RevokedAt = c.revokedAt.Time
 			tmpl.RevocationReason = ocsp.Unspecified // TODO
+		} else {
+			tmpl.Status = ocsp.Good
 		}
 
 		// Sign response using CA certificate
@@ -170,6 +170,11 @@ func makeOCSPHandler() errHandler {
 }
 
 func main() {
-	http.Handle("/ocsp", makeOCSPHandler())
+	db, err := sql.Open("sqlite3", "dev.sqlite")
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer db.Close()
+	http.Handle("/ocsp", makeOCSPHandler(db))
 	log.Fatal(http.ListenAndServe("localhost:8889", nil))
 }
