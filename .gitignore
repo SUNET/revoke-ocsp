@@ -1,3 +1,6 @@
 data
 wd
 dev.sqlite
+ca.pem
+responder.pem
+responder_key.pem
