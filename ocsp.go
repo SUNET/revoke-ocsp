@@ -2,6 +2,7 @@ package main
 
 import (
 	"crypto"
+	"crypto/ecdsa"
 	"crypto/x509"
 	"database/sql"
 	"encoding/pem"
@@ -51,6 +52,30 @@ func readPEM(filename string) (*pem.Block, error) {
 		return nil, fmt.Errorf("PEM parsing failure: %s", filename)
 	}
 	return block, nil
+}
+
+func readKey(filename string) (*ecdsa.PrivateKey, error) {
+	pemBlock, err := readPEM(filename)
+	if err != nil {
+		return nil, err
+	}
+	key, err := x509.ParseECPrivateKey(pemBlock.Bytes)
+	if err != nil {
+		return nil, err
+	}
+	return key, err
+}
+
+func readCert(filename string) (*x509.Certificate, error) {
+	pemBlock, err := readPEM(filename)
+	if err != nil {
+		return nil, err
+	}
+	cert, err := x509.ParseCertificate(pemBlock.Bytes)
+	if err != nil {
+		return nil, err
+	}
+	return cert, err
 }
 
 type cert struct {
@@ -103,19 +128,11 @@ func makeOCSPHandler(db *sql.DB) errHandler {
 
 		// Read CA certificate, key
 		// TODO: Optimization: Only when needed.
-		pemBlock, err := readPEM("data/get.eduroam.se.pem")
+		caCert, err := readCert("data/get.eduroam.se.pem")
 		if err != nil {
 			return err
 		}
-		caCert, err := x509.ParseCertificate(pemBlock.Bytes)
-		if err != nil {
-			return err
-		}
-		pemBlock, err = readPEM("data/get.eduroam.se.key.pem")
-		if err != nil {
-			return err
-		}
-		caKey, err := x509.ParseECPrivateKey(pemBlock.Bytes)
+		caKey, err := readKey("data/get.eduroam.se.key.pem")
 		if err != nil {
 			return err
 		}
