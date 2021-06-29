@@ -168,7 +168,7 @@ func makeOCSPHandler(db *sql.DB) errHandler {
 		} else if c.revoked {
 			tmpl.Status = ocsp.Revoked
 			if !c.revokedAt.Valid {
-				return errors.New("Database error: No revocation date")
+				return errors.New("No revocation date in database entry")
 			}
 			tmpl.RevokedAt = c.revokedAt.Time
 			tmpl.RevocationReason = ocsp.Unspecified // TODO
