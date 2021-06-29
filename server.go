@@ -2,24 +2,18 @@ package main
 
 import (
 	"crypto"
-	"crypto/ecdsa"
-	"crypto/x509"
 	"database/sql"
 	"encoding/json"
-	"encoding/pem"
 	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
 	"log"
 	"net/http"
-	"os"
 	"strconv"
 	"time"
 
 	"golang.org/x/crypto/ocsp"
-
-	_ "github.com/mattn/go-sqlite3"
 )
 
 type requestError struct {
@@ -43,70 +37,19 @@ func (fn errHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func readPEM(filename string) (*pem.Block, error) {
-	pemData, err := os.ReadFile(filename)
+// Read JSON from rc, populate struct pointed to by data
+func readJSON(rc io.ReadCloser, data interface{}) (interface{}, error) {
+	jsonData, err := io.ReadAll(rc)
 	if err != nil {
-		return nil, err
+		return nil, requestError{"Bad body"}
 	}
-	block, _ := pem.Decode(pemData)
-	if block == nil {
-		return nil, fmt.Errorf("PEM parsing failure: %s", filename)
-	}
-	return block, nil
-}
 
-func readKey(filename string) (*ecdsa.PrivateKey, error) {
-	pemBlock, err := readPEM(filename)
+	err = json.Unmarshal(jsonData, data)
 	if err != nil {
-		return nil, err
-	}
-	key, err := x509.ParseECPrivateKey(pemBlock.Bytes)
-	if err != nil {
-		return nil, err
-	}
-	return key, err
-}
-
-func readCert(filename string) (*x509.Certificate, error) {
-	pemBlock, err := readPEM(filename)
-	if err != nil {
-		return nil, err
-	}
-	cert, err := x509.ParseCertificate(pemBlock.Bytes)
-	if err != nil {
-		return nil, err
-	}
-	return cert, err
-}
-
-type cert struct {
-	serial    int64
-	revoked   bool
-	revokedAt sql.NullTime
-}
-
-func readIndex(db *sql.DB) (map[int64]*cert, error) {
-	rows, err := db.Query("SELECT serial, revoked, revoked_at FROM revoked ORDER BY serial")
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-
-	res := make(map[int64]*cert)
-	for rows.Next() {
-		c := cert{}
-		err = rows.Scan(&c.serial, &c.revoked, &c.revokedAt)
-		if err != nil {
-			return nil, err
-		}
-		res[c.serial] = &c
+		return nil, requestError{"Bad body"}
 	}
 
-	if err = rows.Err(); err != nil {
-		return nil, err
-	}
-
-	return res, nil
+	return data, nil
 }
 
 // Handle an OCSP request using standard library and golang.org/x/crypto/ocsp.
@@ -191,47 +134,6 @@ func makeOCSPHandler(db *sql.DB) errHandler {
 	}
 }
 
-// Read JSON from rc, populate struct pointed to by data
-func readJSON(rc io.ReadCloser, data interface{}) (interface{}, error) {
-	jsonData, err := io.ReadAll(rc)
-	if err != nil {
-		return nil, requestError{"Bad body"}
-	}
-
-	err = json.Unmarshal(jsonData, data)
-	if err != nil {
-		return nil, requestError{"Bad body"}
-	}
-
-	return data, nil
-}
-
-// Add a certificate to the database, overwriting a row with the same serial
-// number if present. If revokedAt is zero, the current time is used as
-// revocation time.
-func update(db *sql.DB, serial int64, revoked bool, revokedAt time.Time) error {
-	// TODO: Prepare once
-	stmt, err := db.Prepare("REPLACE INTO revoked VALUES (?, ?, ?);")
-	if err != nil {
-		return err
-	}
-	defer stmt.Close()
-
-	if revokedAt.IsZero() {
-		revokedAt = time.Now().UTC()
-	}
-	var revokedAtStr string
-	if revoked {
-		revokedAtStr = revokedAt.Format(time.RFC3339)
-	}
-
-	_, err = stmt.Exec(serial, revoked, revokedAtStr)
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
 func makeUpdateHandler(db *sql.DB) errHandler {
 	return func(w http.ResponseWriter, r *http.Request) error {
 		if r.Method != "PUT" {
@@ -252,15 +154,4 @@ func makeUpdateHandler(db *sql.DB) errHandler {
 		w.WriteHeader(http.StatusOK)
 		return nil
 	}
-}
-
-func main() {
-	db, err := sql.Open("sqlite3", "dev.sqlite")
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer db.Close()
-	http.Handle("/ocsp", makeOCSPHandler(db))
-	http.Handle("/update", makeUpdateHandler(db))
-	log.Fatal(http.ListenAndServe("localhost:8889", nil))
 }
