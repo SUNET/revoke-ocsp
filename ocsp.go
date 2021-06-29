@@ -209,7 +209,7 @@ func readJSON(rc io.ReadCloser, data interface{}) (interface{}, error) {
 // Add a certificate to the database, overwriting a row with the same serial
 // number if present. If revokedAt is zero, the current time is used as
 // revocation time.
-func add(db *sql.DB, serial int, revoked bool, revokedAt time.Time) error {
+func update(db *sql.DB, serial int, revoked bool, revokedAt time.Time) error {
 	// TODO: Prepare once
 	stmt, err := db.Prepare("REPLACE INTO revoked VALUES (?, ?, ?);")
 	if err != nil {
@@ -232,10 +232,10 @@ func add(db *sql.DB, serial int, revoked bool, revokedAt time.Time) error {
 	return nil
 }
 
-func makeAddHandler(db *sql.DB) errHandler {
+func makeUpdateHandler(db *sql.DB) errHandler {
 	return func(w http.ResponseWriter, r *http.Request) error {
-		if r.Method != "POST" {
-			return requestError{"Only POST requests are supported"}
+		if r.Method != "PUT" {
+			return requestError{"Only PUT requests are supported"}
 		}
 
 		body := struct {
@@ -248,7 +248,7 @@ func makeAddHandler(db *sql.DB) errHandler {
 			return err
 		}
 
-		add(db, body.Serial, body.Revoked, body.RevokedAt)
+		update(db, body.Serial, body.Revoked, body.RevokedAt)
 		w.WriteHeader(http.StatusOK)
 		return nil
 	}
@@ -261,6 +261,6 @@ func main() {
 	}
 	defer db.Close()
 	http.Handle("/ocsp", makeOCSPHandler(db))
-	http.Handle("/add", makeAddHandler(db))
+	http.Handle("/update", makeUpdateHandler(db))
 	log.Fatal(http.ListenAndServe("localhost:8889", nil))
 }
