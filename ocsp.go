@@ -126,13 +126,17 @@ func makeOCSPHandler(db *sql.DB) errHandler {
 			return err
 		}
 
-		// Read CA certificate, key
+		// Read CA and responder certificate, responder key
 		// TODO: Optimization: Only when needed.
 		caCert, err := readCert("data/get.eduroam.se.pem")
 		if err != nil {
 			return err
 		}
-		caKey, err := readKey("data/get.eduroam.se.key.pem")
+		responderCert, err := readCert("data/get.eduroam.se.pem")
+		if err != nil {
+			return err
+		}
+		responderKey, err := readKey("data/get.eduroam.se.key.pem")
 		if err != nil {
 			return err
 		}
@@ -173,7 +177,7 @@ func makeOCSPHandler(db *sql.DB) errHandler {
 		}
 
 		// Sign response using CA certificate
-		resp, err := ocsp.CreateResponse(caCert, caCert, tmpl, caKey)
+		resp, err := ocsp.CreateResponse(caCert, responderCert, tmpl, responderKey)
 		if err != nil {
 			return err
 		}
