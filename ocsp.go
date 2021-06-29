@@ -31,7 +31,6 @@ func (e requestError) Error() string {
 type errHandler func(w http.ResponseWriter, r *http.Request) error
 
 func (fn errHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Access-Control-Allow-Origin", "*")
 	if err := fn(w, r); err != nil {
 		if _, ok := err.(requestError); ok {
 			http.Error(w, err.Error(), http.StatusBadRequest)
