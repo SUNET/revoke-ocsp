@@ -5,9 +5,11 @@ import (
 	"crypto/ecdsa"
 	"crypto/x509"
 	"database/sql"
+	"encoding/json"
 	"encoding/pem"
 	"errors"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -189,6 +191,69 @@ func makeOCSPHandler(db *sql.DB) errHandler {
 	}
 }
 
+// Read JSON from rc, populate struct pointed to by data
+func readJSON(rc io.ReadCloser, data interface{}) (interface{}, error) {
+	jsonData, err := io.ReadAll(rc)
+	if err != nil {
+		return nil, requestError{"Bad body"}
+	}
+
+	err = json.Unmarshal(jsonData, data)
+	if err != nil {
+		return nil, requestError{"Bad body"}
+	}
+
+	return data, nil
+}
+
+// Add a certificate to the database, overwriting a row with the same serial
+// number if present. If revokedAt is zero, the current time is used as
+// revocation time.
+func add(db *sql.DB, serial int, revoked bool, revokedAt time.Time) error {
+	// TODO: Prepare once
+	stmt, err := db.Prepare("REPLACE INTO revoked VALUES (?, ?, ?);")
+	if err != nil {
+		return err
+	}
+	defer stmt.Close()
+
+	if revokedAt.IsZero() {
+		revokedAt = time.Now().UTC()
+	}
+	var revokedAtStr string
+	if revoked {
+		revokedAtStr = revokedAt.Format(time.RFC3339)
+	}
+
+	_, err = stmt.Exec(serial, revoked, revokedAtStr)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func makeAddHandler(db *sql.DB) errHandler {
+	return func(w http.ResponseWriter, r *http.Request) error {
+		if r.Method != "POST" {
+			return requestError{"Only POST requests are supported"}
+		}
+
+		body := struct {
+			Serial    int
+			Revoked   bool
+			RevokedAt time.Time
+		}{}
+		_, err := readJSON(r.Body, &body)
+		if err != nil {
+			return err
+		}
+
+		add(db, body.Serial, body.Revoked, body.RevokedAt)
+		w.WriteHeader(http.StatusOK)
+		return nil
+	}
+}
+
 func main() {
 	db, err := sql.Open("sqlite3", "dev.sqlite")
 	if err != nil {
@@ -196,5 +261,6 @@ func main() {
 	}
 	defer db.Close()
 	http.Handle("/ocsp", makeOCSPHandler(db))
+	http.Handle("/add", makeAddHandler(db))
 	log.Fatal(http.ListenAndServe("localhost:8889", nil))
 }
