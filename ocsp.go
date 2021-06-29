@@ -118,7 +118,7 @@ func readIndex(db *sql.DB) (map[int64]*cert, error) {
 func makeOCSPHandler(db *sql.DB) errHandler {
 	return func(w http.ResponseWriter, r *http.Request) error {
 		if r.Method != "POST" {
-			return errors.New("Only POST requests are supported")
+			return requestError{"Only POST requests are supported"}
 		}
 
 		index, err := readIndex(db)
