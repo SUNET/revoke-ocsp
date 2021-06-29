@@ -209,7 +209,7 @@ func readJSON(rc io.ReadCloser, data interface{}) (interface{}, error) {
 // Add a certificate to the database, overwriting a row with the same serial
 // number if present. If revokedAt is zero, the current time is used as
 // revocation time.
-func update(db *sql.DB, serial int, revoked bool, revokedAt time.Time) error {
+func update(db *sql.DB, serial int64, revoked bool, revokedAt time.Time) error {
 	// TODO: Prepare once
 	stmt, err := db.Prepare("REPLACE INTO revoked VALUES (?, ?, ?);")
 	if err != nil {
@@ -239,7 +239,7 @@ func makeUpdateHandler(db *sql.DB) errHandler {
 		}
 
 		body := struct {
-			Serial    int
+			Serial    int64
 			Revoked   bool
 			RevokedAt time.Time
 		}{}
