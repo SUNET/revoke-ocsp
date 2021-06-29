@@ -111,10 +111,10 @@ func makeOCSPHandler(db *sql.DB) errHandler {
 			tmpl.Status = ocsp.Unknown
 		} else if c.revoked {
 			tmpl.Status = ocsp.Revoked
-			if !c.revokedAt.Valid {
+			if c.revokedAt.IsZero() {
 				return errors.New("No revocation date in database entry")
 			}
-			tmpl.RevokedAt = c.revokedAt.Time
+			tmpl.RevokedAt = c.revokedAt
 			tmpl.RevocationReason = ocsp.Unspecified // TODO
 		} else {
 			tmpl.Status = ocsp.Good
@@ -150,7 +150,7 @@ func makeUpdateHandler(db *sql.DB) errHandler {
 			return err
 		}
 
-		update(db, body.Serial, body.Revoked, body.RevokedAt)
+		update(db, &cert{body.Serial, body.Revoked, body.RevokedAt})
 		w.WriteHeader(http.StatusOK)
 		return nil
 	}

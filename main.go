@@ -4,9 +4,16 @@ import (
 	"database/sql"
 	"log"
 	"net/http"
+	"time"
 
 	_ "github.com/mattn/go-sqlite3"
 )
+
+type cert struct {
+	serial    int64
+	revoked   bool
+	revokedAt time.Time
+}
 
 func main() {
 	db, err := sql.Open("sqlite3", "dev.sqlite")
