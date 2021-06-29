@@ -176,7 +176,7 @@ func makeOCSPHandler(db *sql.DB) errHandler {
 			tmpl.Status = ocsp.Good
 		}
 
-		// Sign response using CA certificate
+		// Sign response using responder certificate
 		resp, err := ocsp.CreateResponse(caCert, responderCert, tmpl, responderKey)
 		if err != nil {
 			return err
