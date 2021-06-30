@@ -48,15 +48,15 @@ func update(db *sql.DB, c *cert) error {
 	}
 	defer stmt.Close()
 
-	if c.revokedAt.IsZero() {
-		c.revokedAt = time.Now().UTC()
+	if c.RevokedAt.IsZero() {
+		c.RevokedAt = time.Now().UTC()
 	}
 	var revokedAtStr string
-	if c.revoked {
-		revokedAtStr = c.revokedAt.Format(time.RFC3339)
+	if c.Revoked {
+		revokedAtStr = c.RevokedAt.Format(time.RFC3339)
 	}
 
-	_, err = stmt.Exec(c.serial, c.revoked, revokedAtStr)
+	_, err = stmt.Exec(c.Serial, c.Revoked, revokedAtStr)
 	if err != nil {
 		return err
 	}

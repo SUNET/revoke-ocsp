@@ -109,12 +109,12 @@ func makeOCSPHandler(db *sql.DB) errHandler {
 
 		if c, found := index[serial]; !found {
 			tmpl.Status = ocsp.Unknown
-		} else if c.revoked {
+		} else if c.Revoked {
 			tmpl.Status = ocsp.Revoked
-			if c.revokedAt.IsZero() {
+			if c.RevokedAt.IsZero() {
 				return errors.New("No revocation date in database entry")
 			}
-			tmpl.RevokedAt = c.revokedAt
+			tmpl.RevokedAt = c.RevokedAt
 			tmpl.RevocationReason = ocsp.Unspecified // TODO
 		} else {
 			tmpl.Status = ocsp.Good
@@ -140,18 +140,36 @@ func makeUpdateHandler(db *sql.DB) errHandler {
 			return requestError{"Only PUT requests are supported"}
 		}
 
-		body := struct {
-			Serial    int64
-			Revoked   bool
-			RevokedAt time.Time
-		}{}
-		_, err := readJSON(r.Body, &body)
+		var c cert
+		_, err := readJSON(r.Body, &c)
 		if err != nil {
 			return err
 		}
 
-		update(db, &cert{body.Serial, body.Revoked, body.RevokedAt})
+		update(db, &c)
 		w.WriteHeader(http.StatusOK)
+		return nil
+	}
+}
+
+func makeAllHandler(db *sql.DB) errHandler {
+	return func(w http.ResponseWriter, r *http.Request) error {
+		if r.Method != "GET" {
+			return requestError{"Only GET requests are supported"}
+		}
+
+		index, err := readIndex(db)
+		if err != nil {
+			return err
+		}
+
+		res, err := json.Marshal(index)
+		if err != nil {
+			return err
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		w.Write(res)
 		return nil
 	}
 }
