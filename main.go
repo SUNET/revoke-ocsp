@@ -22,9 +22,24 @@ func main() {
 		log.Fatal(err)
 	}
 	defer db.Close()
-	http.Handle("/ocsp", makeOCSPHandler(db))
+
+	caCert, err := readCert(CA_CERT)
+	if err != nil {
+		log.Fatal(err)
+	}
+	responderCert, err := readCert(RESPONDER_CERT)
+	if err != nil {
+		log.Fatal(err)
+	}
+	responderKey, err := readKey(RESPONDER_KEY)
+	if err != nil {
+		log.Fatal(err)
+	}
+	http.Handle("/ocsp", makeOCSPHandler(db, caCert, responderCert, responderKey))
+
 	http.Handle("/update", makeUpdateHandler(db))
 	http.Handle("/init", makeInitHandler(db))
 	http.Handle("/all", makeAllHandler(db))
+
 	log.Fatal(http.ListenAndServe(fmt.Sprintf("localhost:%d", PORT), nil))
 }

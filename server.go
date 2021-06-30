@@ -2,6 +2,8 @@ package main
 
 import (
 	"crypto"
+	"crypto/ecdsa"
+	"crypto/x509"
 	"database/sql"
 	"encoding/json"
 	"errors"
@@ -59,28 +61,13 @@ func readJSON(rc io.ReadCloser, data interface{}) (interface{}, error) {
 // [1]: https://datatracker.ietf.org/doc/html/rfc6960#section-4.4.1
 // [2]: https://datatracker.ietf.org/doc/html/rfc6960#section-4.2.1
 // [3]: https://github.com/golang/go/issues/22335
-func makeOCSPHandler(db *sql.DB) errHandler {
+func makeOCSPHandler(db *sql.DB, caCert, responderCert *x509.Certificate, responderKey *ecdsa.PrivateKey) errHandler {
 	return func(w http.ResponseWriter, r *http.Request) error {
 		if r.Method != "POST" {
 			return requestError{"Only POST requests are supported"}
 		}
 
 		index, err := readIndex(db)
-		if err != nil {
-			return err
-		}
-
-		// Read CA and responder certificate, responder key
-		// TODO: Optimization: Only when needed.
-		caCert, err := readCert(CA_CERT)
-		if err != nil {
-			return err
-		}
-		responderCert, err := readCert(RESPONDER_CERT)
-		if err != nil {
-			return err
-		}
-		responderKey, err := readKey(RESPONDER_KEY)
 		if err != nil {
 			return err
 		}
