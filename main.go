@@ -23,6 +23,7 @@ func main() {
 	defer db.Close()
 	http.Handle("/ocsp", makeOCSPHandler(db))
 	http.Handle("/update", makeUpdateHandler(db))
+	http.Handle("/init", makeInitHandler(db))
 	http.Handle("/all", makeAllHandler(db))
 	log.Fatal(http.ListenAndServe("localhost:8889", nil))
 }

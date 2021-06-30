@@ -48,6 +48,15 @@ func getCert(serial int) (res cert) {
 	return
 }
 
+func getCount() (res int) {
+	row := db.QueryRow("SELECT count(*) FROM revoked")
+	err := row.Scan(&res)
+	if err != nil {
+		log.Fatal(err)
+	}
+	return
+}
+
 func getTime(s string) (res time.Time) {
 	res, err := time.Parse(time.RFC3339, s)
 	if err != nil {
@@ -168,5 +177,45 @@ func TestUpdate(t *testing.T) {
 			End()
 
 		assert.Equal(t, cert{4, false, zeroTime}, getCert(4))
+	})
+}
+
+func TestInit(t *testing.T) {
+	t.Run("Empty", func(t *testing.T) {
+		setup()
+		apitest.New().
+			Handler(makeInitHandler(db)).
+			Put("/init").
+			Body("[]").
+			Expect(t).
+			Status(http.StatusOK).
+			End()
+
+		assert.Equal(t, 0, getCount())
+	})
+
+	t.Run("Not empty", func(t *testing.T) {
+		setup()
+		apitest.New().
+			Handler(makeInitHandler(db)).
+			Put("/init").
+			Body(`[
+				{
+					"serial": 1,
+					"revoked": false
+				},
+				{
+					"serial": 2,
+					"revoked": true,
+					"revoked_at": "2020-01-01T00:00:00Z"
+				}
+			]`).
+			Expect(t).
+			Status(http.StatusOK).
+			End()
+
+		assert.Equal(t, 2, getCount())
+		assert.Equal(t, cert{1, false, zeroTime}, getCert(1))
+		assert.Equal(t, cert{2, true, getTime("2020-01-01T00:00:00Z")}, getCert(2))
 	})
 }

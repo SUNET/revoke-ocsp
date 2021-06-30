@@ -152,6 +152,21 @@ func makeUpdateHandler(db *sql.DB) errHandler {
 	}
 }
 
+func makeInitHandler(db *sql.DB) errHandler {
+	return func(w http.ResponseWriter, r *http.Request) error {
+		if r.Method != "PUT" {
+			return requestError{"Only PUT requests are supported"}
+		}
+		var certs []*cert
+		_, err := readJSON(r.Body, &certs)
+		if err != nil {
+			return err
+		}
+		initDB(db, certs)
+		return nil
+	}
+}
+
 func makeAllHandler(db *sql.DB) errHandler {
 	return func(w http.ResponseWriter, r *http.Request) error {
 		if r.Method != "GET" {

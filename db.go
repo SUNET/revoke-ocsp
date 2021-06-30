@@ -62,3 +62,25 @@ func update(db *sql.DB, c *cert) error {
 	}
 	return nil
 }
+
+// Wipe database and replace it with cs
+func initDB(db *sql.DB, certs []*cert) error {
+	_, err := db.Exec(`
+		DROP TABLE IF EXISTS revoked;
+		CREATE TABLE "revoked" (
+			"serial" INTEGER NOT NULL PRIMARY KEY,
+			"revoked" BOOLEAN NOT NULL,
+			"revoked_at" DATE
+		);
+	`)
+	if err != nil {
+		return err
+	}
+	for _, c := range certs {
+		err = update(db, c)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
