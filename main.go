@@ -2,6 +2,7 @@ package main
 
 import (
 	"database/sql"
+	"fmt"
 	"log"
 	"net/http"
 	"time"
@@ -25,5 +26,5 @@ func main() {
 	http.Handle("/update", makeUpdateHandler(db))
 	http.Handle("/init", makeInitHandler(db))
 	http.Handle("/all", makeAllHandler(db))
-	log.Fatal(http.ListenAndServe("localhost:8889", nil))
+	log.Fatal(http.ListenAndServe(fmt.Sprintf("localhost:%d", PORT), nil))
 }
