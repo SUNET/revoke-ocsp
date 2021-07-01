@@ -31,4 +31,4 @@ Wipe the OCSP database and initialize it with the given data.
 
 - Method: GET
 
-Responds with array of all OCSP database entries.
+Responds with map of all OCSP database entries.
