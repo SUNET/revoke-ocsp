@@ -1,4 +1,4 @@
-package main
+package ocsp
 
 const (
 	CA_CERT        = "ca.pem"

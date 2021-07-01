@@ -1,4 +1,4 @@
-package main
+package ocsp
 
 import (
 	"crypto"
@@ -61,7 +61,7 @@ func readJSON(rc io.ReadCloser, data interface{}) (interface{}, error) {
 // [1]: https://datatracker.ietf.org/doc/html/rfc6960#section-4.4.1
 // [2]: https://datatracker.ietf.org/doc/html/rfc6960#section-4.2.1
 // [3]: https://github.com/golang/go/issues/22335
-func makeOCSPHandler(db *sql.DB, caCert, responderCert *x509.Certificate, responderKey *ecdsa.PrivateKey) errHandler {
+func MakeOCSPHandler(db *sql.DB, caCert, responderCert *x509.Certificate, responderKey *ecdsa.PrivateKey) errHandler {
 	return func(w http.ResponseWriter, r *http.Request) error {
 		if r.Method != "POST" {
 			return requestError{"Only POST requests are supported"}
@@ -118,7 +118,7 @@ func makeOCSPHandler(db *sql.DB, caCert, responderCert *x509.Certificate, respon
 	}
 }
 
-func makeUpdateHandler(db *sql.DB) errHandler {
+func MakeUpdateHandler(db *sql.DB) errHandler {
 	return func(w http.ResponseWriter, r *http.Request) error {
 		if r.Method != "PUT" {
 			return requestError{"Only PUT requests are supported"}
@@ -136,7 +136,7 @@ func makeUpdateHandler(db *sql.DB) errHandler {
 	}
 }
 
-func makeInitHandler(db *sql.DB) errHandler {
+func MakeInitHandler(db *sql.DB) errHandler {
 	return func(w http.ResponseWriter, r *http.Request) error {
 		if r.Method != "PUT" {
 			return requestError{"Only PUT requests are supported"}
@@ -151,7 +151,7 @@ func makeInitHandler(db *sql.DB) errHandler {
 	}
 }
 
-func makeAllHandler(db *sql.DB) errHandler {
+func MakeAllHandler(db *sql.DB) errHandler {
 	return func(w http.ResponseWriter, r *http.Request) error {
 		if r.Method != "GET" {
 			return requestError{"Only GET requests are supported"}

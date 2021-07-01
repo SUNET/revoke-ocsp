@@ -1,4 +1,4 @@
-package main
+package ocsp
 
 import (
 	"crypto/ecdsa"
@@ -20,7 +20,7 @@ func readPEM(filename string) (*pem.Block, error) {
 	return block, nil
 }
 
-func readKey(filename string) (*ecdsa.PrivateKey, error) {
+func ReadKey(filename string) (*ecdsa.PrivateKey, error) {
 	pemBlock, err := readPEM(filename)
 	if err != nil {
 		return nil, err
@@ -32,7 +32,7 @@ func readKey(filename string) (*ecdsa.PrivateKey, error) {
 	return key, err
 }
 
-func readCert(filename string) (*x509.Certificate, error) {
+func ReadCert(filename string) (*x509.Certificate, error) {
 	pemBlock, err := readPEM(filename)
 	if err != nil {
 		return nil, err

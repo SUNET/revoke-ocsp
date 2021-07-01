@@ -1,4 +1,4 @@
-package main
+package ocsp
 
 import (
 	"database/sql"
@@ -79,7 +79,7 @@ func TestMain(m *testing.M) {
 func TestAll(t *testing.T) {
 	setup()
 	apitest.New().
-		Handler(makeAllHandler(db)).
+		Handler(MakeAllHandler(db)).
 		Get("/all").
 		Expect(t).
 		Status(http.StatusOK).
@@ -108,7 +108,7 @@ func TestUpdate(t *testing.T) {
 	t.Run("Add non revoked", func(t *testing.T) {
 		setup()
 		apitest.New().
-			Handler(makeUpdateHandler(db)).
+			Handler(MakeUpdateHandler(db)).
 			Put("/update").
 			Body(`{
 				"serial": 5,
@@ -124,7 +124,7 @@ func TestUpdate(t *testing.T) {
 	t.Run("Add revoked", func(t *testing.T) {
 		setup()
 		apitest.New().
-			Handler(makeUpdateHandler(db)).
+			Handler(MakeUpdateHandler(db)).
 			Put("/update").
 			Body(`{
 				"serial": 5,
@@ -140,7 +140,7 @@ func TestUpdate(t *testing.T) {
 	t.Run("Replace", func(t *testing.T) {
 		setup()
 		apitest.New().
-			Handler(makeUpdateHandler(db)).
+			Handler(MakeUpdateHandler(db)).
 			Put("/update").
 			Body(`{
 				"serial": 4,
@@ -158,7 +158,7 @@ func TestInit(t *testing.T) {
 	t.Run("Empty", func(t *testing.T) {
 		setup()
 		apitest.New().
-			Handler(makeInitHandler(db)).
+			Handler(MakeInitHandler(db)).
 			Put("/init").
 			Body("[]").
 			Expect(t).
@@ -171,7 +171,7 @@ func TestInit(t *testing.T) {
 	t.Run("Not empty", func(t *testing.T) {
 		setup()
 		apitest.New().
-			Handler(makeInitHandler(db)).
+			Handler(MakeInitHandler(db)).
 			Put("/init").
 			Body(`[
 				{

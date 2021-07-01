@@ -5,15 +5,10 @@ import (
 	"fmt"
 	"log"
 	"net/http"
-	"time"
 
+	. "github.com/ernstwi/ocsp-responder/ocsp"
 	_ "github.com/mattn/go-sqlite3"
 )
-
-type cert struct {
-	Serial  int64     `json:"serial"`
-	Revoked time.Time `json:"revoked"`
-}
 
 func main() {
 	db, err := sql.Open("sqlite3", "dev.sqlite")
@@ -22,23 +17,23 @@ func main() {
 	}
 	defer db.Close()
 
-	caCert, err := readCert(CA_CERT)
+	caCert, err := ReadCert(CA_CERT)
 	if err != nil {
 		log.Fatal(err)
 	}
-	responderCert, err := readCert(RESPONDER_CERT)
+	responderCert, err := ReadCert(RESPONDER_CERT)
 	if err != nil {
 		log.Fatal(err)
 	}
-	responderKey, err := readKey(RESPONDER_KEY)
+	responderKey, err := ReadKey(RESPONDER_KEY)
 	if err != nil {
 		log.Fatal(err)
 	}
-	http.Handle("/ocsp", makeOCSPHandler(db, caCert, responderCert, responderKey))
+	http.Handle("/ocsp", MakeOCSPHandler(db, caCert, responderCert, responderKey))
 
-	http.Handle("/update", makeUpdateHandler(db))
-	http.Handle("/init", makeInitHandler(db))
-	http.Handle("/all", makeAllHandler(db))
+	http.Handle("/update", MakeUpdateHandler(db))
+	http.Handle("/init", MakeInitHandler(db))
+	http.Handle("/all", MakeAllHandler(db))
 
 	log.Fatal(http.ListenAndServe(fmt.Sprintf("localhost:%d", PORT), nil))
 }

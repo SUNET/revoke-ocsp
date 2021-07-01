@@ -1,8 +1,14 @@
-package main
+package ocsp
 
 import (
 	"database/sql"
+	"time"
 )
+
+type cert struct {
+	Serial  int64     `json:"serial"`
+	Revoked time.Time `json:"revoked"`
+}
 
 func readIndex(db *sql.DB) (map[int64]*cert, error) {
 	rows, err := db.Query("SELECT serial, revoked FROM revoked ORDER BY serial")
