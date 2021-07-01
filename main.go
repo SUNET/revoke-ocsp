@@ -11,9 +11,8 @@ import (
 )
 
 type cert struct {
-	Serial    int64     `json:"serial"`
-	Revoked   bool      `json:"revoked"`
-	RevokedAt time.Time `json:"revoked_at"`
+	Serial  int64     `json:"serial"`
+	Revoked time.Time `json:"revoked"`
 }
 
 func main() {

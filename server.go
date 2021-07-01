@@ -96,15 +96,12 @@ func makeOCSPHandler(db *sql.DB, caCert, responderCert *x509.Certificate, respon
 
 		if c, found := index[serial]; !found {
 			tmpl.Status = ocsp.Unknown
-		} else if c.Revoked {
-			tmpl.Status = ocsp.Revoked
-			if c.RevokedAt.IsZero() {
-				return errors.New("No revocation date in database entry")
-			}
-			tmpl.RevokedAt = c.RevokedAt
-			tmpl.RevocationReason = ocsp.Unspecified // TODO
-		} else {
+		} else if c.Revoked.IsZero() {
 			tmpl.Status = ocsp.Good
+		} else {
+			tmpl.Status = ocsp.Revoked
+			tmpl.RevokedAt = c.Revoked
+			tmpl.RevocationReason = ocsp.Unspecified // TODO
 		}
 
 		// Sign response using responder certificate

@@ -11,10 +11,9 @@ Responds to POST OSCP requests according to RFC 6960.
 - Method: PUT
 - Body: JSON
     - `serial`: integer
-    - `revoked`: boolean
-    - `revoked_at`: RFC 3339 string, with "0001-01-01T00:00:00Z" signifying null
+    - `revoked`: RFC 3339 string, with "0001-01-01T00:00:00Z" signifying null
 
-Add a certificate to the OCSP database, overwriting a row with the same serial number if present. If `revoked_at` is "0001-01-01T00:00:00Z" (RFC 3339 format of date's zero value in Go), the current time is used as revocation time.
+Add a certificate to the OCSP database, overwriting a row with the same serial number if present.
 
 ### `/init`
 
@@ -22,8 +21,7 @@ Add a certificate to the OCSP database, overwriting a row with the same serial n
 - Body: JSON
     - Array of objects with properties
         - `serial`: integer
-        - `revoked`: boolean
-        - `revoked_at`: RFC 3339 string, with "0001-01-01T00:00:00Z" signifying null
+        - `revoked`: RFC 3339 string, with "0001-01-01T00:00:00Z" signifying null
 
 Wipe the OCSP database and initialize it with the given data.
 

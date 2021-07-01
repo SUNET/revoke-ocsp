@@ -2,11 +2,10 @@ package main
 
 import (
 	"database/sql"
-	"time"
 )
 
 func readIndex(db *sql.DB) (map[int64]*cert, error) {
-	rows, err := db.Query("SELECT serial, revoked, revoked_at FROM revoked ORDER BY serial")
+	rows, err := db.Query("SELECT serial, revoked FROM revoked ORDER BY serial")
 	if err != nil {
 		return nil, err
 	}
@@ -14,20 +13,12 @@ func readIndex(db *sql.DB) (map[int64]*cert, error) {
 
 	res := make(map[int64]*cert)
 	for rows.Next() {
-		c := struct {
-			serial    int64
-			revoked   bool
-			revokedAt sql.NullTime
-		}{}
-		err = rows.Scan(&c.serial, &c.revoked, &c.revokedAt)
+		var c cert
+		err = rows.Scan(&c.Serial, &c.Revoked)
 		if err != nil {
 			return nil, err
 		}
-		var revokedAt time.Time
-		if c.revokedAt.Valid {
-			revokedAt = c.revokedAt.Time
-		}
-		res[c.serial] = &cert{c.serial, c.revoked, revokedAt}
+		res[c.Serial] = &c
 	}
 
 	if err = rows.Err(); err != nil {
@@ -42,21 +33,13 @@ func readIndex(db *sql.DB) (map[int64]*cert, error) {
 // revocation time.
 func update(db *sql.DB, c *cert) error {
 	// TODO: Prepare once
-	stmt, err := db.Prepare("REPLACE INTO revoked VALUES (?, ?, ?);")
+	stmt, err := db.Prepare("REPLACE INTO revoked VALUES (?, ?);")
 	if err != nil {
 		return err
 	}
 	defer stmt.Close()
 
-	if c.RevokedAt.IsZero() {
-		c.RevokedAt = time.Now().UTC()
-	}
-	var revokedAtStr string
-	if c.Revoked {
-		revokedAtStr = c.RevokedAt.Format(time.RFC3339)
-	}
-
-	_, err = stmt.Exec(c.Serial, c.Revoked, revokedAtStr)
+	_, err = stmt.Exec(c.Serial, c.Revoked)
 	if err != nil {
 		return err
 	}
@@ -69,8 +52,7 @@ func initDB(db *sql.DB, certs []*cert) error {
 		DROP TABLE IF EXISTS revoked;
 		CREATE TABLE "revoked" (
 			"serial" INTEGER NOT NULL PRIMARY KEY,
-			"revoked" BOOLEAN NOT NULL,
-			"revoked_at" DATE
+			"revoked" DATE NOT NULL
 		);
 	`)
 	if err != nil {
