@@ -29,8 +29,7 @@ func readIndex(db *sql.DB) (map[int64]*cert, error) {
 }
 
 // Add a certificate to the database, overwriting a row with the same serial
-// number if present. If c.revokedAt is zero, the current time is used as
-// revocation time.
+// number if present.
 func update(db *sql.DB, c *cert) error {
 	// TODO: Prepare once
 	stmt, err := db.Prepare("REPLACE INTO revoked VALUES (?, ?);")
