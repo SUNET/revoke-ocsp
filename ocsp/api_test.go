@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"fmt"
 	"log"
+	"net"
 	"net/http"
 	"os"
 	"os/exec"
@@ -110,12 +111,14 @@ func TestOCSP(t *testing.T) {
 
 	http.Handle("/ocsp", MakeOCSPHandler(db, caCert, responderCert, responderKey))
 
-	go func() {
-		log.Fatal(http.ListenAndServe(fmt.Sprintf("localhost:%d", PORT), nil))
-	}()
+	l, err := net.Listen("tcp", fmt.Sprintf(":%d", PORT))
+	if err != nil {
+		log.Fatal(err)
+	}
 
-	// TODO: Wait intelligently for OCSP server to be ready
-	time.Sleep(time.Second)
+	go func() {
+		log.Fatal(http.Serve(l, nil))
+	}()
 
 	t.Run("Initial: Good", func(t *testing.T) {
 		status := strings.Split(
