@@ -6,9 +6,13 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"os/exec"
+	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
+	_ "github.com/mattn/go-sqlite3"
 	"github.com/steinfletcher/apitest"
 	"github.com/stretchr/testify/assert"
 )
@@ -64,6 +68,18 @@ func getTime(s string) (res time.Time) {
 	return
 }
 
+func run(name string, arg ...string) string {
+	out, err := exec.Command(name, arg...).Output()
+	if err != nil {
+		log.Fatal(string(err.(*exec.ExitError).Stderr))
+	}
+	return string(out)
+}
+
+func root(file string) string {
+	return filepath.Join("..", file)
+}
+
 // Tests
 
 func TestMain(m *testing.M) {
@@ -74,6 +90,84 @@ func TestMain(m *testing.M) {
 	}
 	defer db.Close()
 	os.Exit(m.Run())
+}
+
+func TestOCSP(t *testing.T) {
+	setup()
+
+	caCert, err := ReadCert(root(CA_CERT))
+	if err != nil {
+		log.Fatal(err)
+	}
+	responderCert, err := ReadCert(root(RESPONDER_CERT))
+	if err != nil {
+		log.Fatal(err)
+	}
+	responderKey, err := ReadKey(root(RESPONDER_KEY))
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	http.Handle("/ocsp", MakeOCSPHandler(db, caCert, responderCert, responderKey))
+
+	go func() {
+		log.Fatal(http.ListenAndServe(fmt.Sprintf("localhost:%d", PORT), nil))
+	}()
+
+	// TODO: Wait intelligently for OCSP server to be ready
+	time.Sleep(time.Second)
+
+	t.Run("Initial: Good", func(t *testing.T) {
+		status := strings.Split(
+			run("openssl", "ocsp",
+				"-CAfile", root(CA_CERT),
+				"-issuer", root(CA_CERT),
+				"-cert", root(TEST_CLIENT_CERT),
+				"-url", fmt.Sprintf("http://localhost:%d/ocsp", PORT)),
+			"\n")[0]
+		assert.Equal(t, root(TEST_CLIENT_CERT)+": good", status)
+	})
+
+	t.Run("Revoke #1 using /update", func(t *testing.T) {
+		apitest.New().
+			Handler(MakeUpdateHandler(db)).
+			Put("/update").
+			Body(`{
+				"serial": 1,
+				"revoked": "2020-01-01T00:00:00Z"
+			}`).
+			Expect(t).
+			Status(http.StatusOK).
+			End()
+	})
+
+	t.Run("#1 should be revoked", func(t *testing.T) {
+		status := strings.Split(
+			run("openssl", "ocsp",
+				"-CAfile", root(CA_CERT),
+				"-issuer", root(CA_CERT),
+				"-cert", root(TEST_CLIENT_CERT),
+				"-url", fmt.Sprintf("http://localhost:%d/ocsp", PORT)),
+			"\n")[0]
+		assert.Equal(t, root(TEST_CLIENT_CERT)+": revoked", status)
+	})
+
+	t.Run("Unknown serial number", func(t *testing.T) {
+		// NOTE: This status might be changed to "good" in the future
+		_, err := db.Exec(`DELETE FROM revoked WHERE serial = 1`)
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		status := strings.Split(
+			run("openssl", "ocsp",
+				"-CAfile", root(CA_CERT),
+				"-issuer", root(CA_CERT),
+				"-cert", root(TEST_CLIENT_CERT),
+				"-url", fmt.Sprintf("http://localhost:%d/ocsp", PORT)),
+			"\n")[0]
+		assert.Equal(t, root(TEST_CLIENT_CERT)+": unknown", status)
+	})
 }
 
 func TestAll(t *testing.T) {
