@@ -13,6 +13,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/joho/godotenv"
 	_ "github.com/mattn/go-sqlite3"
 	"github.com/steinfletcher/apitest"
 	"github.com/stretchr/testify/assert"
@@ -81,9 +82,32 @@ func root(file string) string {
 	return filepath.Join("..", file)
 }
 
+func loadEnv() {
+	godotenv.Load(root("default.env"))
+	godotenv.Overload(root("custom.env"))
+}
+
+func assertEnv(required ...string) {
+	for _, v := range required {
+		if _, ok := os.LookupEnv(v); !ok {
+			log.Fatal(fmt.Errorf("Environment variable %s not defined", v))
+		}
+	}
+}
+
 // Tests
 
 func TestMain(m *testing.M) {
+	var REQUIRED_ENV_VARS = []string{
+		"CA_CERT",
+		"RESPONDER_CERT",
+		"RESPONDER_KEY",
+		"PORT",
+	}
+	loadEnv()
+	assertEnv(REQUIRED_ENV_VARS...)
+	assertEnv("TEST_CLIENT_CERT")
+
 	var err error
 	db, err = sql.Open("sqlite3", ":memory:") // In-memory database
 	if err != nil {
@@ -96,22 +120,22 @@ func TestMain(m *testing.M) {
 func TestOCSP(t *testing.T) {
 	setup()
 
-	caCert, err := ReadCert(root(CA_CERT))
+	caCert, err := ReadCert(root(os.Getenv("CA_CERT")))
 	if err != nil {
 		log.Fatal(err)
 	}
-	responderCert, err := ReadCert(root(RESPONDER_CERT))
+	responderCert, err := ReadCert(root(os.Getenv("RESPONDER_CERT")))
 	if err != nil {
 		log.Fatal(err)
 	}
-	responderKey, err := ReadKey(root(RESPONDER_KEY))
+	responderKey, err := ReadKey(root(os.Getenv("RESPONDER_KEY")))
 	if err != nil {
 		log.Fatal(err)
 	}
 
 	http.Handle("/ocsp", MakeOCSPHandler(db, caCert, responderCert, responderKey))
 
-	l, err := net.Listen("tcp", fmt.Sprintf(":%d", PORT))
+	l, err := net.Listen("tcp", fmt.Sprintf(":%s", os.Getenv("PORT")))
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -123,12 +147,12 @@ func TestOCSP(t *testing.T) {
 	t.Run("Initial: Good", func(t *testing.T) {
 		status := strings.Split(
 			run("openssl", "ocsp",
-				"-CAfile", root(CA_CERT),
-				"-issuer", root(CA_CERT),
-				"-cert", root(TEST_CLIENT_CERT),
-				"-url", fmt.Sprintf("http://localhost:%d/ocsp", PORT)),
+				"-CAfile", root(os.Getenv("CA_CERT")),
+				"-issuer", root(os.Getenv("CA_CERT")),
+				"-cert", root(os.Getenv("TEST_CLIENT_CERT")),
+				"-url", fmt.Sprintf("http://localhost:%s/ocsp", os.Getenv("PORT"))),
 			"\n")[0]
-		assert.Equal(t, root(TEST_CLIENT_CERT)+": good", status)
+		assert.Equal(t, root(os.Getenv("TEST_CLIENT_CERT"))+": good", status)
 	})
 
 	t.Run("Revoke #1 using /update", func(t *testing.T) {
@@ -147,12 +171,12 @@ func TestOCSP(t *testing.T) {
 	t.Run("#1 should be revoked", func(t *testing.T) {
 		status := strings.Split(
 			run("openssl", "ocsp",
-				"-CAfile", root(CA_CERT),
-				"-issuer", root(CA_CERT),
-				"-cert", root(TEST_CLIENT_CERT),
-				"-url", fmt.Sprintf("http://localhost:%d/ocsp", PORT)),
+				"-CAfile", root(os.Getenv("CA_CERT")),
+				"-issuer", root(os.Getenv("CA_CERT")),
+				"-cert", root(os.Getenv("TEST_CLIENT_CERT")),
+				"-url", fmt.Sprintf("http://localhost:%s/ocsp", os.Getenv("PORT"))),
 			"\n")[0]
-		assert.Equal(t, root(TEST_CLIENT_CERT)+": revoked", status)
+		assert.Equal(t, root(os.Getenv("TEST_CLIENT_CERT"))+": revoked", status)
 	})
 
 	t.Run("Unknown serial number", func(t *testing.T) {
@@ -164,12 +188,12 @@ func TestOCSP(t *testing.T) {
 
 		status := strings.Split(
 			run("openssl", "ocsp",
-				"-CAfile", root(CA_CERT),
-				"-issuer", root(CA_CERT),
-				"-cert", root(TEST_CLIENT_CERT),
-				"-url", fmt.Sprintf("http://localhost:%d/ocsp", PORT)),
+				"-CAfile", root(os.Getenv("CA_CERT")),
+				"-issuer", root(os.Getenv("CA_CERT")),
+				"-cert", root(os.Getenv("TEST_CLIENT_CERT")),
+				"-url", fmt.Sprintf("http://localhost:%s/ocsp", os.Getenv("PORT"))),
 			"\n")[0]
-		assert.Equal(t, root(TEST_CLIENT_CERT)+": unknown", status)
+		assert.Equal(t, root(os.Getenv("TEST_CLIENT_CERT"))+": unknown", status)
 	})
 }
 
