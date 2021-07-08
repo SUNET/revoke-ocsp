@@ -15,6 +15,14 @@ For testing an additional variable `TEST_CLIENT_CERT` should point to a certific
 
 You can either edit `default.env`, or use a new file `custom.env` which will override `default.env`.
 
+## Initialization
+
+To initialize the revocation database, do
+
+```
+$ sqlite3 dev.sqlite < init.sql
+```
+
 ## Private API specification
 
 ### `/ocsp`
