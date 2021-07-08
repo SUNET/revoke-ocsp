@@ -1,3 +1,20 @@
+# ocsp-responder
+
+## Configuration
+
+The following environment variables are required:
+
+```
+CA_CERT
+RESPONDER_CERT
+RESPONDER_KEY
+PORT
+```
+
+For testing an additional variable `TEST_CLIENT_CERT` should point to a certificate signed by `CA_CERT` with serial number 1.
+
+You can either edit `default.env`, or use a new file `custom.env` which will override `default.env`.
+
 ## Private API specification
 
 ### `/ocsp`
