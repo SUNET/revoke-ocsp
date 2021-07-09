@@ -60,5 +60,5 @@ func main() {
 	http.Handle("/init", MakeInitHandler(db))
 	http.Handle("/all", MakeAllHandler(db))
 
-	log.Fatal(http.ListenAndServe(fmt.Sprintf("localhost:%s", os.Getenv("PORT")), nil))
+	log.Fatal(http.ListenAndServe(":"+os.Getenv("PORT"), nil))
 }
