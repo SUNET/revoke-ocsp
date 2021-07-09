@@ -1,0 +1,7 @@
+#!/usr/bin/env bash
+openssl ocsp \
+    -CAfile certs/ca.pem \
+    -issuer certs/ca.pem \
+    -cert certs/test_client.pem \
+    -url http://localhost:8002/ocsp \
+    -text
