@@ -1,4 +1,4 @@
-# ocsp-responder
+# revoke-ocsp
 
 ## Configuration
 

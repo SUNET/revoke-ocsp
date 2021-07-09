@@ -8,4 +8,4 @@ RUN go install -v ./...
 
 EXPOSE 8002
 
-CMD ["ocsp-responder"]
+CMD ["revoke-ocsp"]

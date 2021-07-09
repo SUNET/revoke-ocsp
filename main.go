@@ -7,7 +7,7 @@ import (
 	"net/http"
 	"os"
 
-	. "github.com/ernstwi/ocsp-responder/ocsp"
+	. "github.com/ernstwi/revoke-ocsp/ocsp"
 	"github.com/joho/godotenv"
 	_ "github.com/mattn/go-sqlite3"
 )

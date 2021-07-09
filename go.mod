@@ -1,4 +1,4 @@
-module github.com/ernstwi/ocsp-responder
+module github.com/ernstwi/revoke-ocsp
 
 go 1.16
 
