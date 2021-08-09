@@ -73,6 +73,9 @@ func MakeOCSPHandler(db *sql.DB, caCert, responderCert *x509.Certificate, respon
 		}
 
 		req, err := ocsp.ParseRequest(body)
+		if err != nil {
+			return errors.New("Could not parse OCSP request")
+		}
 		if !req.SerialNumber.IsInt64() {
 			return errors.New("Requested serial number is larger than 64 bits")
 		}
