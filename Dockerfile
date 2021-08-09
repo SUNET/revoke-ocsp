@@ -1,6 +1,6 @@
 FROM golang:1.16
 
-WORKDIR /ocsp
+WORKDIR /usr/src/app
 COPY . .
 
 RUN go get -d -v ./...
