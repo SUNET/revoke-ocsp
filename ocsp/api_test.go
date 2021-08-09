@@ -144,7 +144,7 @@ func TestOCSP(t *testing.T) {
 		log.Fatal(http.Serve(l, nil))
 	}()
 
-	t.Run("Initial: Good", func(t *testing.T) {
+	t.Run("#1: Good (zero value revocation time)", func(t *testing.T) {
 		status := strings.Split(
 			run("openssl", "ocsp",
 				"-CAfile", root(os.Getenv("CA_CERT")),
@@ -168,7 +168,7 @@ func TestOCSP(t *testing.T) {
 			End()
 	})
 
-	t.Run("#1 should be revoked", func(t *testing.T) {
+	t.Run("#1: Revoked", func(t *testing.T) {
 		status := strings.Split(
 			run("openssl", "ocsp",
 				"-CAfile", root(os.Getenv("CA_CERT")),
@@ -179,7 +179,7 @@ func TestOCSP(t *testing.T) {
 		assert.Equal(t, root(os.Getenv("TEST_CLIENT_CERT"))+": revoked", status)
 	})
 
-	t.Run("Unknown serial number", func(t *testing.T) {
+	t.Run("#1: Unknown serial number", func(t *testing.T) {
 		// NOTE: This status might be changed to "good" in the future
 		_, err := db.Exec(`DELETE FROM revoked WHERE serial = 1`)
 		if err != nil {
