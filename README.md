@@ -14,14 +14,6 @@ DB
 
 For testing an additional variable `TEST_CLIENT_CERT` should point to a certificate signed by `CA_CERT` with serial number 1.
 
-## Initialization
-
-To initialize the revocation database, do
-
-```
-$ sqlite3 dev.sqlite < init.sql
-```
-
 ## Private API specification
 
 ### `/ocsp`

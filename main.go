@@ -33,11 +33,30 @@ func assertEnv(required ...string) {
 	}
 }
 
+func initDB() (*sql.DB, error) {
+	db, err := sql.Open("sqlite3", os.Getenv("DB"))
+	if err != nil {
+		return nil, err
+	}
+
+	_, err = db.Exec(`
+		CREATE TABLE IF NOT EXISTS "revoked" (
+			"serial" INTEGER NOT NULL PRIMARY KEY,
+			"revoked" DATE NOT NULL
+		);
+	`)
+	if err != nil {
+		return nil, err
+	}
+
+	return db, nil
+}
+
 func main() {
 	loadEnv()
 	assertEnv(REQUIRED_ENV_VARS...)
 
-	db, err := sql.Open("sqlite3", os.Getenv("DB"))
+	db, err := initDB()
 	if err != nil {
 		log.Fatal(err)
 	}
