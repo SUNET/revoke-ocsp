@@ -34,6 +34,12 @@ func readIndex(db *sql.DB) (map[int64]*cert, error) {
 	return res, nil
 }
 
+func get(db *sql.DB, serial int64) (time.Time, error) {
+	var revoked time.Time
+	err := db.QueryRow("SELECT revoked FROM revoked WHERE serial = ?", serial).Scan(&revoked)
+	return revoked, err
+}
+
 // Add a certificate to the database, overwriting a row with the same serial
 // number if present.
 func update(db *sql.DB, c *cert) error {

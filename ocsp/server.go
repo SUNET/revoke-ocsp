@@ -9,7 +9,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"log"
 	"net/http"
 	"strconv"
@@ -67,17 +66,22 @@ func MakeOCSPHandler(db *sql.DB, caCert, responderCert *x509.Certificate, respon
 			return requestError{"Only POST requests are supported"}
 		}
 
-		index, err := readIndex(db)
+		// Parse request
+		body, err := io.ReadAll(r.Body)
 		if err != nil {
 			return err
 		}
 
-		// Parse request
-		body, err := ioutil.ReadAll(r.Body)
-		if err != nil {
-			return err
-		}
 		req, err := ocsp.ParseRequest(body)
+		if !req.SerialNumber.IsInt64() {
+			return errors.New("Requested serial number is larger than 64 bits")
+		}
+
+		serial := req.SerialNumber.Int64()
+		revoked, err := get(db, serial)
+		if err != nil && err != sql.ErrNoRows {
+			return errors.New("SQL error")
+		}
 
 		// Create response
 		now := time.Now()
@@ -89,18 +93,13 @@ func MakeOCSPHandler(db *sql.DB, caCert, responderCert *x509.Certificate, respon
 			// NextUpdate:   now.Add(time.Hour), // TODO
 		}
 
-		serial := req.SerialNumber.Int64()
-		if !req.SerialNumber.IsInt64() {
-			return errors.New("Requested serial number is larger than 64 bits")
-		}
-
-		if c, found := index[serial]; !found {
+		if err == sql.ErrNoRows {
 			tmpl.Status = ocsp.Unknown
-		} else if c.Revoked.IsZero() {
+		} else if revoked.IsZero() {
 			tmpl.Status = ocsp.Good
 		} else {
 			tmpl.Status = ocsp.Revoked
-			tmpl.RevokedAt = c.Revoked
+			tmpl.RevokedAt = revoked
 			tmpl.RevocationReason = ocsp.Unspecified // TODO
 		}
 
