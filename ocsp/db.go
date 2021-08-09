@@ -6,12 +6,12 @@ import (
 )
 
 type cert struct {
-	Serial  int64     `json:"serial"`
-	Revoked time.Time `json:"revoked"`
+	Serial    int64     `json:"serial"`
+	RevokedAt time.Time `json:"revoked_at"`
 }
 
-func readIndex(db *sql.DB) (map[int64]*cert, error) {
-	rows, err := db.Query("SELECT serial, revoked FROM revoked ORDER BY serial")
+func getAll(db *sql.DB) (map[int64]*cert, error) {
+	rows, err := db.Query("SELECT serial, revoked_at FROM revoked ORDER BY serial")
 	if err != nil {
 		return nil, err
 	}
@@ -20,7 +20,7 @@ func readIndex(db *sql.DB) (map[int64]*cert, error) {
 	res := make(map[int64]*cert)
 	for rows.Next() {
 		var c cert
-		err = rows.Scan(&c.Serial, &c.Revoked)
+		err = rows.Scan(&c.Serial, &c.RevokedAt)
 		if err != nil {
 			return nil, err
 		}
@@ -35,9 +35,9 @@ func readIndex(db *sql.DB) (map[int64]*cert, error) {
 }
 
 func get(db *sql.DB, serial int64) (time.Time, error) {
-	var revoked time.Time
-	err := db.QueryRow("SELECT revoked FROM revoked WHERE serial = ?", serial).Scan(&revoked)
-	return revoked, err
+	var revokedAt time.Time
+	err := db.QueryRow("SELECT revoked_at FROM revoked WHERE serial = ?", serial).Scan(&revokedAt)
+	return revokedAt, err
 }
 
 // Add a certificate to the database, overwriting a row with the same serial
@@ -50,7 +50,7 @@ func update(db *sql.DB, c *cert) error {
 	}
 	defer stmt.Close()
 
-	_, err = stmt.Exec(c.Serial, c.Revoked)
+	_, err = stmt.Exec(c.Serial, c.RevokedAt)
 	if err != nil {
 		return err
 	}
@@ -63,7 +63,7 @@ func initDB(db *sql.DB, certs []*cert) error {
 		DROP TABLE IF EXISTS revoked;
 		CREATE TABLE "revoked" (
 			"serial" INTEGER NOT NULL PRIMARY KEY,
-			"revoked" DATE NOT NULL
+			"revoked_at" DATE NOT NULL
 		);
 	`)
 	if err != nil {

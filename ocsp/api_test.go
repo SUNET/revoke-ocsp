@@ -46,7 +46,7 @@ func setup() {
 
 func getCert(serial int) (res cert) {
 	row := db.QueryRow(fmt.Sprintf("SELECT * FROM revoked WHERE serial = %d", serial))
-	err := row.Scan(&res.Serial, &res.Revoked)
+	err := row.Scan(&res.Serial, &res.RevokedAt)
 	if err != nil {
 		log.Fatal(err)
 	}
