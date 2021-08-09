@@ -9,6 +9,7 @@ CA_CERT
 RESPONDER_CERT
 RESPONDER_KEY
 PORT
+DB
 ```
 
 For testing an additional variable `TEST_CLIENT_CERT` should point to a certificate signed by `CA_CERT` with serial number 1.

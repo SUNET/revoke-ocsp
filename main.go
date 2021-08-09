@@ -17,6 +17,7 @@ var REQUIRED_ENV_VARS = []string{
 	"RESPONDER_CERT",
 	"RESPONDER_KEY",
 	"PORT",
+	"DB",
 }
 
 func loadEnv() {
@@ -36,7 +37,7 @@ func main() {
 	loadEnv()
 	assertEnv(REQUIRED_ENV_VARS...)
 
-	db, err := sql.Open("sqlite3", "dev.sqlite")
+	db, err := sql.Open("sqlite3", os.Getenv("DB"))
 	if err != nil {
 		log.Fatal(err)
 	}
