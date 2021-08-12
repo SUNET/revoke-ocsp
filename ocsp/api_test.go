@@ -180,7 +180,7 @@ func TestOCSP(t *testing.T) {
 	})
 
 	t.Run("#1: Unknown serial number", func(t *testing.T) {
-		// NOTE: This status might be changed to "good" in the future
+		// NOTE: This status might be changed from "good" to "unknown" in the future
 		_, err := db.Exec(`DELETE FROM revoked WHERE serial = 1`)
 		if err != nil {
 			log.Fatal(err)
@@ -193,7 +193,7 @@ func TestOCSP(t *testing.T) {
 				"-cert", root(os.Getenv("TEST_CLIENT_CERT")),
 				"-url", fmt.Sprintf("http://localhost:%s/ocsp", os.Getenv("PORT"))),
 			"\n")[0]
-		assert.Equal(t, root(os.Getenv("TEST_CLIENT_CERT"))+": unknown", status)
+		assert.Equal(t, root(os.Getenv("TEST_CLIENT_CERT"))+": good", status)
 	})
 }
 

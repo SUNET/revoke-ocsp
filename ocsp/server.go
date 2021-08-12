@@ -97,7 +97,7 @@ func MakeOCSPHandler(db *sql.DB, caCert, responderCert *x509.Certificate, respon
 		}
 
 		if err == sql.ErrNoRows {
-			tmpl.Status = ocsp.Unknown
+			tmpl.Status = ocsp.Good // Serial number not in OCSP database
 		} else if revoked.IsZero() {
 			tmpl.Status = ocsp.Good
 		} else {
