@@ -30,7 +30,7 @@ func setup() {
 
 		CREATE TABLE "revoked" (
 			"serial" INTEGER NOT NULL PRIMARY KEY,
-			"revoked_at" DATE NOT NULL
+			"revoked" DATE NOT NULL
 		);
 
 		INSERT INTO "revoked" VALUES
@@ -161,7 +161,7 @@ func TestOCSP(t *testing.T) {
 			Put("/update").
 			Body(`{
 				"serial": 1,
-				"revoked_at": "2020-01-01T00:00:00Z"
+				"revoked": "2020-01-01T00:00:00Z"
 			}`).
 			Expect(t).
 			Status(http.StatusOK).
@@ -207,19 +207,19 @@ func TestAll(t *testing.T) {
 		Body(`{
 			"1": {
 				"serial": 1,
-				"revoked_at": "0001-01-01T00:00:00Z"
+				"revoked": "0001-01-01T00:00:00Z"
 			},
 			"2": {
 				"serial": 2,
-				"revoked_at": "0001-01-01T00:00:00Z"
+				"revoked": "0001-01-01T00:00:00Z"
 			},
 			"3": {
 				"serial": 3,
-				"revoked_at": "2019-10-12T07:20:50Z"
+				"revoked": "2019-10-12T07:20:50Z"
 			},
 			"4": {
 				"serial": 4,
-				"revoked_at": "2019-10-12T07:20:50Z"
+				"revoked": "2019-10-12T07:20:50Z"
 			}
 		}`).
 		End()
@@ -233,7 +233,7 @@ func TestUpdate(t *testing.T) {
 			Put("/update").
 			Body(`{
 				"serial": 5,
-				"revoked_at": "0001-01-01T00:00:00Z"
+				"revoked": "0001-01-01T00:00:00Z"
 			}`).
 			Expect(t).
 			Status(http.StatusOK).
@@ -249,7 +249,7 @@ func TestUpdate(t *testing.T) {
 			Put("/update").
 			Body(`{
 				"serial": 5,
-				"revoked_at": "2020-01-01T00:00:00Z"
+				"revoked": "2020-01-01T00:00:00Z"
 			}`).
 			Expect(t).
 			Status(http.StatusOK).
@@ -265,7 +265,7 @@ func TestUpdate(t *testing.T) {
 			Put("/update").
 			Body(`{
 				"serial": 4,
-				"revoked_at": "0001-01-01T00:00:00Z"
+				"revoked": "0001-01-01T00:00:00Z"
 			}`).
 			Expect(t).
 			Status(http.StatusOK).
@@ -297,11 +297,11 @@ func TestInit(t *testing.T) {
 			Body(`[
 				{
 					"serial": 1,
-					"revoked_at": "0001-01-01T00:00:00Z"
+					"revoked": "0001-01-01T00:00:00Z"
 				},
 				{
 					"serial": 2,
-					"revoked_at": "2020-01-01T00:00:00Z"
+					"revoked": "2020-01-01T00:00:00Z"
 				}
 			]`).
 			Expect(t).
