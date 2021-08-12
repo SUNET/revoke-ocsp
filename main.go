@@ -42,7 +42,7 @@ func initDB() (*sql.DB, error) {
 	_, err = db.Exec(`
 		CREATE TABLE IF NOT EXISTS "revoked" (
 			"serial" INTEGER NOT NULL PRIMARY KEY,
-			"revoked_at" DATE NOT NULL
+			"revoked" DATE NOT NULL
 		);
 	`)
 	if err != nil {

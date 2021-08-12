@@ -159,7 +159,7 @@ func MakeAllHandler(db *sql.DB) errHandler {
 			return requestError{"Only GET requests are supported"}
 		}
 
-		index, err := getAll(db)
+		index, err := readIndex(db)
 		if err != nil {
 			return err
 		}
