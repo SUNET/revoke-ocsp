@@ -10,7 +10,7 @@ type cert struct {
 	Revoked time.Time `json:"revoked"`
 }
 
-func readIndex(db *sql.DB) (map[int64]*cert, error) {
+func getAll(db *sql.DB) (map[int64]*cert, error) {
 	rows, err := db.Query("SELECT serial, revoked FROM revoked ORDER BY serial")
 	if err != nil {
 		return nil, err
